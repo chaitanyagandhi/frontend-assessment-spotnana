@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './App.css';
 
 const initialChats = [
@@ -68,6 +68,7 @@ function App() {
 
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
   const activeChat =
     chats.find((chat) => chat.id === activeChatId) || chats[0] || null;
@@ -87,6 +88,10 @@ function App() {
       setActiveChatId(chats[0].id);
     }
   }, [chats, activeChatId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeChat, isLoading]);
 
   const handleNewChat = () => {
     const newChat = {
@@ -142,10 +147,14 @@ function App() {
         }
 
         const isEmptyChat = chat.messages.length === 0;
+        const nextTitle =
+          trimmedMessage.length > 30
+            ? `${trimmedMessage.slice(0, 30)}...`
+            : trimmedMessage;
 
         return {
           ...chat,
-          title: isEmptyChat ? trimmedMessage.slice(0, 30) || 'New Chat' : chat.title,
+          title: isEmptyChat ? nextTitle || 'New Chat' : chat.title,
           messages: [...chat.messages, userMessage],
         };
       })
@@ -232,6 +241,7 @@ function App() {
               key={chat.id}
               className={`chat-item ${chat.id === activeChatId ? 'active' : ''}`}
               onClick={() => setActiveChatId(chat.id)}
+              title={chat.title}
             >
               {chat.title}
             </button>
@@ -271,6 +281,8 @@ function App() {
                   <div className="message-content">Thinking...</div>
                 </div>
               )}
+
+              <div ref={messagesEndRef} />
             </div>
           ) : (
             <div className="welcome">

@@ -54,6 +54,9 @@
   transition: background-color 0.2s ease;
   text-align: left;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-item:hover {
@@ -72,6 +75,33 @@
   justify-content: space-between;
   padding: 24px;
   box-sizing: border-box;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto 12px;
+}
+
+.clear-btn {
+  padding: 10px 14px;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  background-color: #2a2a2a;
+  color: #ececec;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.clear-btn:hover {
+  background-color: #333333;
+}
+
+.clear-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .chat-window {
@@ -135,6 +165,8 @@
 .message-content {
   font-size: 15px;
   color: #f2f2f2;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .input-area {
@@ -175,34 +207,9 @@
 .send-btn:hover {
   opacity: 0.9;
 }
+
 .send-btn:disabled,
 .prompt-input:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-.top-bar {
-  display: flex;
-  justify-content: flex-end;
-  max-width: 900px;
-  width: 100%;
-  margin: 0 auto 12px;
-}
-
-.clear-btn {
-  padding: 10px 14px;
-  border: 1px solid #3a3a3a;
-  border-radius: 10px;
-  background-color: #2a2a2a;
-  color: #ececec;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.clear-btn:hover {
-  background-color: #333333;
-}
-
-.clear-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
