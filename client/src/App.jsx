@@ -58,18 +58,57 @@ const initialChats = [
 function App() {
   const [chats, setChats] = useState(initialChats);
   const [activeChatId, setActiveChatId] = useState(initialChats[0].id);
+  const [inputValue, setInputValue] = useState('');
 
   const activeChat = chats.find((chat) => chat.id === activeChatId);
 
   const handleNewChat = () => {
     const newChat = {
       id: Date.now(),
-      title: `New Chat ${chats.length + 1}`,
+      title: 'New Chat',
       messages: [],
     };
 
     setChats([newChat, ...chats]);
     setActiveChatId(newChat.id);
+    setInputValue('');
+  };
+
+  const handleSendMessage = () => {
+    const trimmedMessage = inputValue.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    const newMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: trimmedMessage,
+    };
+
+    const updatedChats = chats.map((chat) => {
+      if (chat.id !== activeChatId) {
+        return chat;
+      }
+
+      const isEmptyChat = chat.messages.length === 0;
+
+      return {
+        ...chat,
+        title: isEmptyChat ? trimmedMessage.slice(0, 30) || 'New Chat' : chat.title,
+        messages: [...chat.messages, newMessage],
+      };
+    });
+
+    setChats(updatedChats);
+    setInputValue('');
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      handleSendMessage();
+    }
   };
 
   return (
@@ -123,8 +162,13 @@ function App() {
             type="text"
             placeholder="Ask anything"
             className="prompt-input"
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={handleKeyDown}
           />
-          <button className="send-btn">Send</button>
+          <button className="send-btn" onClick={handleSendMessage}>
+            Send
+          </button>
         </div>
       </main>
     </div>
