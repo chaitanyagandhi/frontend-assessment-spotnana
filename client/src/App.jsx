@@ -100,6 +100,28 @@ function App() {
     setInputValue('');
   };
 
+  const handleClearChat = () => {
+    if (!activeChat) {
+      return;
+    }
+
+    setChats((prevChats) =>
+      prevChats.map((chat) => {
+        if (chat.id !== activeChatId) {
+          return chat;
+        }
+
+        return {
+          ...chat,
+          title: 'New Chat',
+          messages: [],
+        };
+      })
+    );
+
+    setInputValue('');
+  };
+
   const handleSendMessage = async () => {
     const trimmedMessage = inputValue.trim();
 
@@ -218,6 +240,16 @@ function App() {
       </aside>
 
       <main className="main">
+        <div className="top-bar">
+          <button
+            className="clear-btn"
+            onClick={handleClearChat}
+            disabled={!activeChat || isLoading}
+          >
+            Clear Chat
+          </button>
+        </div>
+
         <div className="chat-window">
           {activeChat && activeChat.messages.length > 0 ? (
             <div className="messages">
