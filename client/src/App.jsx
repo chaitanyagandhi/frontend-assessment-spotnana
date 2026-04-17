@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 
 const initialChats = [
@@ -56,12 +56,37 @@ const initialChats = [
 ];
 
 function App() {
-  const [chats, setChats] = useState(initialChats);
-  const [activeChatId, setActiveChatId] = useState(initialChats[0].id);
+  const [chats, setChats] = useState(() => {
+    const savedChats = localStorage.getItem('ai-chat-chats');
+    return savedChats ? JSON.parse(savedChats) : initialChats;
+  });
+
+  const [activeChatId, setActiveChatId] = useState(() => {
+    const savedActiveChatId = localStorage.getItem('ai-chat-active-chat-id');
+    return savedActiveChatId ? Number(savedActiveChatId) : initialChats[0].id;
+  });
+
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const activeChat = chats.find((chat) => chat.id === activeChatId);
+  const activeChat =
+    chats.find((chat) => chat.id === activeChatId) || chats[0] || null;
+
+  useEffect(() => {
+    localStorage.setItem('ai-chat-chats', JSON.stringify(chats));
+  }, [chats]);
+
+  useEffect(() => {
+    if (activeChatId !== null && activeChatId !== undefined) {
+      localStorage.setItem('ai-chat-active-chat-id', String(activeChatId));
+    }
+  }, [activeChatId]);
+
+  useEffect(() => {
+    if (chats.length > 0 && !chats.some((chat) => chat.id === activeChatId)) {
+      setActiveChatId(chats[0].id);
+    }
+  }, [chats, activeChatId]);
 
   const handleNewChat = () => {
     const newChat = {
@@ -70,7 +95,7 @@ function App() {
       messages: [],
     };
 
-    setChats([newChat, ...chats]);
+    setChats((prevChats) => [newChat, ...prevChats]);
     setActiveChatId(newChat.id);
     setInputValue('');
   };
@@ -78,7 +103,7 @@ function App() {
   const handleSendMessage = async () => {
     const trimmedMessage = inputValue.trim();
 
-    if (!trimmedMessage || isLoading) {
+    if (!trimmedMessage || isLoading || !activeChat) {
       return;
     }
 
@@ -88,21 +113,22 @@ function App() {
       content: trimmedMessage,
     };
 
-    const updatedChats = chats.map((chat) => {
-      if (chat.id !== activeChatId) {
-        return chat;
-      }
+    setChats((prevChats) =>
+      prevChats.map((chat) => {
+        if (chat.id !== activeChatId) {
+          return chat;
+        }
 
-      const isEmptyChat = chat.messages.length === 0;
+        const isEmptyChat = chat.messages.length === 0;
 
-      return {
-        ...chat,
-        title: isEmptyChat ? trimmedMessage.slice(0, 30) || 'New Chat' : chat.title,
-        messages: [...chat.messages, userMessage],
-      };
-    });
+        return {
+          ...chat,
+          title: isEmptyChat ? trimmedMessage.slice(0, 30) || 'New Chat' : chat.title,
+          messages: [...chat.messages, userMessage],
+        };
+      })
+    );
 
-    setChats(updatedChats);
     setInputValue('');
     setIsLoading(true);
 
