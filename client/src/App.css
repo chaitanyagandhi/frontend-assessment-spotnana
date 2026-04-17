@@ -29,6 +29,7 @@
   border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
+  text-align: left;
 }
 
 .new-chat-btn:hover {
@@ -39,15 +40,20 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .chat-item {
+  width: 100%;
   padding: 12px;
+  border: none;
   border-radius: 10px;
   cursor: pointer;
   color: #d1d1d1;
   background-color: transparent;
   transition: background-color 0.2s ease;
+  text-align: left;
+  font-size: 14px;
 }
 
 .chat-item:hover {
@@ -70,6 +76,7 @@
 
 .chat-window {
   flex: 1;
+  overflow-y: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -90,6 +97,44 @@
   font-size: 16px;
   color: #a1a1a1;
   margin: 0;
+}
+
+.messages {
+  width: 100%;
+  max-width: 850px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 0;
+}
+
+.message {
+  padding: 16px;
+  border-radius: 14px;
+  line-height: 1.5;
+}
+
+.message.user {
+  background-color: #2a2a2a;
+}
+
+.message.assistant {
+  background-color: #1f1f1f;
+  border: 1px solid #303030;
+}
+
+.message-role {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #9f9f9f;
+  margin-bottom: 8px;
+}
+
+.message-content {
+  font-size: 15px;
+  color: #f2f2f2;
 }
 
 .input-area {
