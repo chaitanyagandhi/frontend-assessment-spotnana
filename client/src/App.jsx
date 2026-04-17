@@ -59,6 +59,7 @@ function App() {
   const [chats, setChats] = useState(initialChats);
   const [activeChatId, setActiveChatId] = useState(initialChats[0].id);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const activeChat = chats.find((chat) => chat.id === activeChatId);
 
@@ -74,14 +75,14 @@ function App() {
     setInputValue('');
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     const trimmedMessage = inputValue.trim();
 
-    if (!trimmedMessage) {
+    if (!trimmedMessage || isLoading) {
       return;
     }
 
-    const newMessage = {
+    const userMessage = {
       id: Date.now(),
       role: 'user',
       content: trimmedMessage,
@@ -97,12 +98,69 @@ function App() {
       return {
         ...chat,
         title: isEmptyChat ? trimmedMessage.slice(0, 30) || 'New Chat' : chat.title,
-        messages: [...chat.messages, newMessage],
+        messages: [...chat.messages, userMessage],
       };
     });
 
     setChats(updatedChats);
     setInputValue('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: trimmedMessage }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get response from server');
+      }
+
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.reply,
+      };
+
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
+          if (chat.id !== activeChatId) {
+            return chat;
+          }
+
+          return {
+            ...chat,
+            messages: [...chat.messages, assistantMessage],
+          };
+        })
+      );
+    } catch (error) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: error.message || 'Something went wrong.',
+      };
+
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
+          if (chat.id !== activeChatId) {
+            return chat;
+          }
+
+          return {
+            ...chat,
+            messages: [...chat.messages, errorMessage],
+          };
+        })
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyDown = (event) => {
@@ -148,6 +206,13 @@ function App() {
                   <div className="message-content">{message.content}</div>
                 </div>
               ))}
+
+              {isLoading && (
+                <div className="message assistant">
+                  <div className="message-role">AI</div>
+                  <div className="message-content">Thinking...</div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="welcome">
@@ -165,9 +230,10 @@ function App() {
             value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={isLoading}
           />
-          <button className="send-btn" onClick={handleSendMessage}>
-            Send
+          <button className="send-btn" onClick={handleSendMessage} disabled={isLoading}>
+            {isLoading ? 'Sending...' : 'Send'}
           </button>
         </div>
       </main>

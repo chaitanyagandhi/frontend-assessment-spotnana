@@ -175,3 +175,8 @@
 .send-btn:hover {
   opacity: 0.9;
 }
+.send-btn:disabled,
+.prompt-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
