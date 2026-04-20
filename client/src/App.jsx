@@ -22,6 +22,8 @@ function App() {
   const activeChat =
     chats.find((chat) => chat.id === activeChatId) || null;
 
+  const isSendDisabled = isLoading || !inputValue.trim();
+
   useEffect(() => {
     if (activeChat) {
       setIsDraftChat(false);
@@ -277,10 +279,10 @@ function App() {
   };
 
   const handleKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      handleSendMessage();
-    }
-  };
+  if (event.key === 'Enter' && !isSendDisabled) {
+    handleSendMessage();
+  }
+};
 
   return (
     <div className="app">
@@ -369,7 +371,11 @@ function App() {
             onKeyDown={handleKeyDown}
             disabled={isLoading}
           />
-          <button className="send-btn" onClick={handleSendMessage} disabled={isLoading}>
+          <button
+            className="send-btn"
+            onClick={handleSendMessage}
+            disabled={isSendDisabled}
+          >
             {isLoading ? 'Sending...' : 'Send'}
           </button>
         </div>
