@@ -1,59 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 
-const initialChats = [
-  {
-    id: 1,
-    title: 'Frontend assessment',
-    messages: [
-      {
-        id: 1,
-        role: 'user',
-        content: 'Build a simple AI-integrated web app using React.',
-      },
-      {
-        id: 2,
-        role: 'assistant',
-        content:
-          'Sure — we can create a clean chat interface with a sidebar, prompt input, loading states, and chat history.',
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Project ideas',
-    messages: [
-      {
-        id: 1,
-        role: 'user',
-        content: 'Give me some AI web app project ideas.',
-      },
-      {
-        id: 2,
-        role: 'assistant',
-        content:
-          'You could build a document summarizer, interview practice assistant, code explainer, or a course Q&A assistant.',
-      },
-    ],
-  },
-  {
-    id: 3,
-    title: 'React questions',
-    messages: [
-      {
-        id: 1,
-        role: 'user',
-        content: 'How should I structure a React frontend project?',
-      },
-      {
-        id: 2,
-        role: 'assistant',
-        content:
-          'Start with reusable components, keep state organized, and separate UI from API logic as the app grows.',
-      },
-    ],
-  },
-];
+const initialChats = [];
 
 function App() {
   const [chats, setChats] = useState(() => {
@@ -63,15 +11,22 @@ function App() {
 
   const [activeChatId, setActiveChatId] = useState(() => {
     const savedActiveChatId = localStorage.getItem('ai-chat-active-chat-id');
-    return savedActiveChatId ? Number(savedActiveChatId) : initialChats[0].id;
+    return savedActiveChatId ? Number(savedActiveChatId) : null;
   });
 
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDraftChat, setIsDraftChat] = useState(false);
   const messagesEndRef = useRef(null);
 
   const activeChat =
-    chats.find((chat) => chat.id === activeChatId) || chats[0] || null;
+    chats.find((chat) => chat.id === activeChatId) || null;
+
+  useEffect(() => {
+    if (activeChat) {
+      setIsDraftChat(false);
+    }
+  }, [activeChat]);
 
   useEffect(() => {
     localStorage.setItem('ai-chat-chats', JSON.stringify(chats));
@@ -83,25 +38,28 @@ function App() {
     }
   }, [activeChatId]);
 
+
   useEffect(() => {
+    if (isDraftChat) {
+      return;
+    }
+
     if (chats.length > 0 && !chats.some((chat) => chat.id === activeChatId)) {
       setActiveChatId(chats[0].id);
     }
-  }, [chats, activeChatId]);
+  }, [chats, activeChatId, isDraftChat]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeChat, isLoading]);
 
   const handleNewChat = () => {
-    const newChat = {
-      id: Date.now(),
-      title: 'New Chat',
-      messages: [],
-    };
+    if (isDraftChat) {
+      return;
+    }
 
-    setChats((prevChats) => [newChat, ...prevChats]);
-    setActiveChatId(newChat.id);
+    setActiveChatId(null);
+    setIsDraftChat(true);
     setInputValue('');
   };
 
@@ -110,39 +68,117 @@ function App() {
       return;
     }
 
-    setChats((prevChats) =>
-      prevChats.map((chat) => {
-        if (chat.id !== activeChatId) {
-          return chat;
-        }
-
-        return {
-          ...chat,
-          title: 'New Chat',
-          messages: [],
-        };
-      })
-    );
-
+    setChats((prevChats) => prevChats.filter((chat) => chat.id !== activeChatId));
+    setActiveChatId(null);
+    setIsDraftChat(true);
     setInputValue('');
   };
 
   const handleSendMessage = async () => {
     const trimmedMessage = inputValue.trim();
 
-    if (!trimmedMessage || isLoading || !activeChat) {
+    if (!trimmedMessage || isLoading) {
+      return;
+    }
+
+    let targetChatId = activeChatId;
+    let creatingNewChat = false;
+
+    if (isDraftChat || !activeChat) {
+      targetChatId = Date.now();
+      creatingNewChat = true;
+
+      const nextTitle =
+        trimmedMessage.length > 30
+          ? `${trimmedMessage.slice(0, 30)}...`
+          : trimmedMessage;
+
+      const userMessage = {
+        id: Date.now() + 1,
+        role: 'user',
+        content: trimmedMessage,
+      };
+
+      const newChat = {
+        id: targetChatId,
+        title: nextTitle || 'New Chat',
+        messages: [userMessage],
+      };
+
+      setChats((prevChats) => [newChat, ...prevChats]);
+      setActiveChatId(targetChatId);
+      setIsDraftChat(false);
+      setInputValue('');
+      setIsLoading(true);
+
+      try {
+        const response = await fetch('http://localhost:5001/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: trimmedMessage }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to get response from server');
+        }
+
+        const assistantMessage = {
+          id: Date.now() + 2,
+          role: 'assistant',
+          content: data.reply,
+        };
+
+        setChats((prevChats) =>
+          prevChats.map((chat) => {
+            if (chat.id !== targetChatId) {
+              return chat;
+            }
+
+            return {
+              ...chat,
+              messages: [...chat.messages, assistantMessage],
+            };
+          })
+        );
+      } catch (error) {
+        const errorMessage = {
+          id: Date.now() + 2,
+          role: 'assistant',
+          content: error.message || 'Something went wrong.',
+        };
+
+        setChats((prevChats) =>
+          prevChats.map((chat) => {
+            if (chat.id !== targetChatId) {
+              return chat;
+            }
+
+            return {
+              ...chat,
+              messages: [...chat.messages, errorMessage],
+            };
+          })
+        );
+      } finally {
+        setIsLoading(false);
+      }
+
       return;
     }
 
     const userMessage = {
-      id: Date.now(),
+      id: Date.now() + 1,
       role: 'user',
       content: trimmedMessage,
     };
 
     setChats((prevChats) =>
       prevChats.map((chat) => {
-        if (chat.id !== activeChatId) {
+        if (chat.id !== targetChatId) {
           return chat;
         }
 
@@ -179,14 +215,14 @@ function App() {
       }
 
       const assistantMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + 2,
         role: 'assistant',
         content: data.reply,
       };
 
       setChats((prevChats) =>
         prevChats.map((chat) => {
-          if (chat.id !== activeChatId) {
+          if (chat.id !== targetChatId) {
             return chat;
           }
 
@@ -198,14 +234,14 @@ function App() {
       );
     } catch (error) {
       const errorMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + 2,
         role: 'assistant',
         content: error.message || 'Something went wrong.',
       };
 
       setChats((prevChats) =>
         prevChats.map((chat) => {
-          if (chat.id !== activeChatId) {
+          if (chat.id !== targetChatId) {
             return chat;
           }
 
@@ -240,7 +276,10 @@ function App() {
             <button
               key={chat.id}
               className={`chat-item ${chat.id === activeChatId ? 'active' : ''}`}
-              onClick={() => setActiveChatId(chat.id)}
+              onClick={() => {
+                setActiveChatId(chat.id);
+                setIsDraftChat(false);
+              }}
               title={chat.title}
             >
               {chat.title}
@@ -254,7 +293,7 @@ function App() {
           <button
             className="clear-btn"
             onClick={handleClearChat}
-            disabled={!activeChat || isLoading}
+            disabled={!activeChat || isDraftChat || isLoading}
           >
             Clear Chat
           </button>
@@ -286,8 +325,16 @@ function App() {
             </div>
           ) : (
             <div className="welcome">
-              <h1>What are you working on?</h1>
-              <p>Start a conversation with the AI assistant.</p>
+              <h1>
+                {isDraftChat || chats.length === 0
+                  ? 'Start a new conversation'
+                  : 'What are you working on?'}
+              </h1>
+              <p>
+                {isDraftChat || chats.length === 0
+                  ? 'Type a message below to begin.'
+                  : 'Start a conversation with the AI assistant.'}
+              </p>
             </div>
           )}
         </div>
