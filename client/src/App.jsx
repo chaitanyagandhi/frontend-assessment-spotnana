@@ -117,7 +117,14 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ prompt: trimmedMessage }),
+          body: JSON.stringify({
+            messages: [
+              {
+                role: 'user',
+                content: trimmedMessage,
+              },
+            ],
+          }),
         });
 
         const data = await response.json();
@@ -199,13 +206,26 @@ function App() {
     setInputValue('');
     setIsLoading(true);
 
+    const conversationHistory = [
+      ...activeChat.messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+      {
+        role: 'user',
+        content: trimmedMessage,
+      },
+    ];
+
     try {
       const response = await fetch('http://localhost:5001/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: trimmedMessage }),
+        body: JSON.stringify({
+          messages: conversationHistory,
+        }),
       });
 
       const data = await response.json();

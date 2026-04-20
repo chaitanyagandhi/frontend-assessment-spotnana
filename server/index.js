@@ -20,43 +20,57 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => {
-    try {
-        const { prompt } = req.body;
+  try {
+    const { messages } = req.body;
 
-        if (!prompt || !prompt.trim()) {
-            return res.status(400).json({ error: 'Prompt is required' });
-        }
-
-        if (!process.env.OPENAI_API_KEY) {
-            return res.status(500).json({ error: 'Missing OpenAI API key' });
-        }
-
-        const response = await client.responses.create({
-            model: 'gpt-4.1-mini',
-            input: [
-                {
-                    role: 'system',
-                    content:
-                        'You are a helpful AI assistant. Keep answers clear, concise, and user-friendly. Respond in plain text only. Do not use markdown, bold formatting, bullet symbols, numbered markdown lists, headings, code fences, or asterisks. Use simple natural sentences and plain numbered points like 1), 2), 3) when needed.',
-                },
-                {
-                    role: 'user',
-                    content: prompt,
-                },
-            ],
-        });
-
-        const reply =
-            response.output_text || 'Sorry, I could not generate a response.';
-
-        return res.json({ reply });
-    } catch (error) {
-        console.error('OpenAI API error:', error);
-
-        return res.status(500).json({
-            error: 'Failed to generate AI response',
-        });
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Messages are required' });
     }
+
+    const formattedMessages = messages
+      .filter(
+        (message) =>
+          message &&
+          typeof message.content === 'string' &&
+          message.content.trim() &&
+          (message.role === 'user' || message.role === 'assistant')
+      )
+      .map((message) => ({
+        role: message.role,
+        content: message.content.trim(),
+      }));
+
+    if (formattedMessages.length === 0) {
+      return res.status(400).json({ error: 'Valid messages are required' });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'Missing OpenAI API key' });
+    }
+
+    const response = await client.responses.create({
+      model: 'gpt-4.1-mini',
+      input: [
+        {
+          role: 'system',
+          content:
+            'You are a helpful AI assistant. Keep answers clear, concise, and user-friendly. Respond in plain text only. Do not use markdown, bold formatting, bullet symbols, numbered markdown lists, headings, code fences, or asterisks. Use simple plain text with short paragraphs or simple numbering like 1) 2) 3) when needed.',
+        },
+        ...formattedMessages,
+      ],
+    });
+
+    const reply =
+      response.output_text || 'Sorry, I could not generate a response.';
+
+    return res.json({ reply });
+  } catch (error) {
+    console.error('OpenAI API error:', error);
+
+    return res.status(500).json({
+      error: 'Failed to generate AI response',
+    });
+  }
 });
 
 app.listen(PORT, () => {
